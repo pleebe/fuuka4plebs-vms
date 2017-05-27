@@ -1,0 +1,30 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/jessie64"
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+  config.vm.provision "shell", inline: <<-SHELL
+    wget -O - http://repo.4plebs.tech/repo.gpg.key | sudo apt-key add -
+    echo "deb http://repo.4plebs.tech/ jessie main" >> /etc/apt/sources.list
+    export DEBIAN_FRONTEND="noninteractive"
+    debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
+    debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
+    apt-get update
+    apt-get install -y nginx mysql-server g++ make git cmake libcppcms1 cppcms-tools libcppcms-dev libcppdb-dev libmagick++-6.q16-dev libmagickwand-6.q16-dev libboost-all-dev libssl-dev libgmp-dev libmagickcore-6.q16-dev openssl discount libmarkdown2-dev
+    service mysql start
+    mysql -uroot -proot -e "create database fuuka4plebs;"
+    cat /vagrant/sql/tables.sql | mysql -uroot -proot fuuka4plebs
+    rm -f /etc/nginx/sites-enabled/*
+    cp /vagrant/confs/nginx/fuuka4plebs.conf /etc/nginx/sites-available/fuuka4plebs.conf
+    ln -s /etc/nginx/sites-available/fuuka4plebs.conf /etc/nginx/sites-enabled/fuuka4plebs.conf
+    service nginx restart
+    mkdir -p /vagrant/fuuka4plebs/src/private/bcrypt/
+    git clone https://github.com/rg3/bcrypt.git /vagrant/fuuka4plebs/src/private/bcrypt/
+    echo ""
+    echo ""
+    echo "Done provisioning"
+    echo "database username: root"
+    echo "database password: root"
+    echo ""
+    echo "All Fuuka4plebs dependencies should be installed"
+  SHELL
+end
