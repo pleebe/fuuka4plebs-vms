@@ -1,0 +1,32 @@
+Vagrant.configure("2") do |config|
+  config.vm.box = "debian/jessie64"
+  config.vm.network "forwarded_port", guest: 80, host: 8080
+  config.ssh.shell = "bash -c 'BASH_ENV=/etc/profile exec bash'"
+  config.vm.provision "shell", inline: <<-SHELL
+    wget -O - http://repo.4plebs.tech/repo.gpg.key | sudo apt-key add -
+    echo "deb http://repo.4plebs.tech/ jessie main" >> /etc/apt/sources.list
+    export DEBIAN_FRONTEND="noninteractive"
+    debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
+    debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
+    apt-get update
+    apt-get install -y nginx mysql-server fuuka4plebs
+    service mysql start
+    mysql -uroot -proot -e "create database fuuka4plebs;"
+    cat /vagrant/sql/tables.sql | mysql -uroot -proot fuuka4plebs
+    rm -f /etc/nginx/sites-enabled/*
+    cp /vagrant/confs/nginx/fuuka4plebs.conf /etc/nginx/sites-available/fuuka4plebs.conf
+    ln -s /etc/nginx/sites-available/fuuka4plebs.conf /etc/nginx/sites-enabled/fuuka4plebs.conf
+    service nginx restart
+    cp /vagrant/confs/fuuka4plebs/fuuka4plebs.js /etc/fuuka4plebs/fuuka4plebs.js
+    cp /vagrant/confs/fuuka4plebs/database.js /etc/fuuka4plebs/database.js
+    chown -R www-data:www-data /var/www/fuuka4plebs/boards/
+    service fuuka4plebs start
+    echo ""
+    echo ""
+    echo "Fuuka4plebs is now live at http://127.0.0.1:8080/"
+    echo "Admin panel location at http://127.0.0.1:8080/admin/"
+    echo "Default admin username: root"
+    echo "Default admin password: toor"
+    echo ""
+  SHELL
+end
