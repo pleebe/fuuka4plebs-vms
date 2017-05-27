@@ -16,7 +16,10 @@ vagrant up
 
 ```
 git clone https://github.com/pleebe/fuuka4plebs-vms.git
-cd fuuka4plebs-vms/dev-vm/
+cd fuuka4plebs-vms
+git submodule init
+git submodule update
+cd dev-vm/
 vagrant up
 ```
 
