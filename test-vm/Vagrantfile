@@ -20,7 +20,9 @@ Vagrant.configure("2") do |config|
     cp /vagrant/confs/fuuka4plebs/fuuka4plebs.js /etc/fuuka4plebs/fuuka4plebs.js
     cp /vagrant/confs/fuuka4plebs/database.js /etc/fuuka4plebs/database.js
     chown -R www-data:www-data /var/www/fuuka4plebs/boards/
-    service fuuka4plebs start
+    /etc/init.d/fuuka4plebs start
+    wget http://sphinxsearch.com/files/sphinxsearch_2.2.11-release-1~jessie_amd64.deb
+    dpkg -i sphinxsearch_2.2.11-release-1~jessie_amd64.deb
     echo ""
     echo ""
     echo "Fuuka4plebs is now live at http://127.0.0.1:8080/"
