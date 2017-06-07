@@ -9,20 +9,40 @@ Vagrant.configure("2") do |config|
     debconf-set-selections <<< "mysql-server mysql-server/root_password password root"
     debconf-set-selections <<< "mysql-server mysql-server/root_password_again password root"
     apt-get update
-    apt-get install -y nginx mysql-server fuuka4plebs
+    apt-get install -y nginx mysql-server fuuka4plebs default-jdk maven git coreutils
+    rm /etc/mysql/my.cnf
+    cp /vagrant/confs/mysql/my.cnf /etc/mysql/my.cnf
     service mysql start
     mysql -uroot -proot -e "create database fuuka4plebs;"
     cat /vagrant/sql/tables.sql | mysql -uroot -proot fuuka4plebs
+    cat /vagrant/sql/demo.sql | mysql -uroot -proot fuuka4plebs
     rm -f /etc/nginx/sites-enabled/*
     cp /vagrant/confs/nginx/fuuka4plebs.conf /etc/nginx/sites-available/fuuka4plebs.conf
     ln -s /etc/nginx/sites-available/fuuka4plebs.conf /etc/nginx/sites-enabled/fuuka4plebs.conf
     service nginx restart
     cp /vagrant/confs/fuuka4plebs/fuuka4plebs.js /etc/fuuka4plebs/fuuka4plebs.js
     cp /vagrant/confs/fuuka4plebs/database.js /etc/fuuka4plebs/database.js
+    chown www-data:www-data /etc/fuuka4plebs/database.js
+    chmod 700 /etc/fuuka4plebs/database.js
     chown -R www-data:www-data /var/www/fuuka4plebs/boards/
     /etc/init.d/fuuka4plebs start
+    git clone https://github.com/eksopl/asagi.git /vagrant/asagi
+    cd /vagrant/asagi/
+    mvn package assembly:single
+    mv target/asagi-0.4.0-SNAPSHOT-full.jar asagi.jar
+    cp /vagrant/confs/asagi/asagi.json .
+    timeout 20 java -jar asagi.jar
     wget http://sphinxsearch.com/files/sphinxsearch_2.2.11-release-1~jessie_amd64.deb
     dpkg -i sphinxsearch_2.2.11-release-1~jessie_amd64.deb
+    rm /etc/sphinxsearch/sphinx.conf
+    cp /vagrant/confs/sphinx/sphinx.conf /etc/sphinxsearch/sphinx.conf
+    killall searchd
+    indexer test_ancient a_ancient c_ancient jp_ancient
+    indexer test_main a_main c_main jp_main
+    indexer test_delta a_delta c_delta jp_delta
+    /etc/init.d/sphinxsearch start
+    (crontab -l ; echo "*/3 * * * * indexer test_delta a_delta c_delta jp_delta --rotate") | sort - | uniq - | crontab -u root -
+    (crontab -l ; echo "0 0 * * * indexer test_main a_main c_main jp_main --rotate") | sort - | uniq - | crontab -u root -
     echo ""
     echo ""
     echo "Fuuka4plebs is now live at http://127.0.0.1:8080/"
